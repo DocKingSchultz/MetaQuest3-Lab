@@ -1,6 +1,8 @@
 using UnityEngine;
 using TMPro;
+using System;
 using System.IO;
+using UnityEngine.XR;
 
 public class VRPositionTracker : MonoBehaviour
 {
@@ -23,7 +25,14 @@ public class VRPositionTracker : MonoBehaviour
         startingPosition = Camera.main.transform.position;
         path = Path.Combine(Application.persistentDataPath, "output.csv");
         ClearFile();
-       
+
+        if (OVRManager.instance != null)
+        {
+            OVRManager.instance.trackingOriginType = OVRManager.TrackingOrigin.Stage;
+        }
+        OVRPlugin.SetTrackingOriginType(OVRPlugin.TrackingOrigin.Stage);
+
+
     }
 
     void Update()
@@ -33,6 +42,7 @@ public class VRPositionTracker : MonoBehaviour
 
         // Get the rotation of the camera (headset)
         Quaternion headsetRotation = Camera.main.transform.rotation;
+
 
         // Calculate movement speed (distance traveled per frame)
         movementSpeed = Vector3.Distance(headsetPosition, previousPosition) / Time.deltaTime;
@@ -44,12 +54,13 @@ public class VRPositionTracker : MonoBehaviour
         previousPosition = headsetPosition;
 
         // Format the output for readability
-        string positionText = string.Format("Position: {0}\nRotation: {1}\nSpeed: {2:F2} units/s\n Distance: {3:F3}\n Recording: {4}\n",
+        string positionText = string.Format("Position: {0}\nRotation: {1}\nSpeed: {2:F2} units/s\n Distance: {3:F3}\n Recording: {4}\nTracking origin type: {5}\n",
                                             headsetPosition.ToString("F3"),
                                             headsetRotation.eulerAngles.ToString("F3"),
                                             movementSpeed,
                                             distance,
-                                            shouldRecord);
+                                            shouldRecord,
+                                            OVRManager.instance.trackingOriginType);
         if (OVRInput.Get(OVRInput.Button.One, OVRInput.Controller.LTouch))
         {
             shouldRecord = true;
@@ -69,7 +80,11 @@ public class VRPositionTracker : MonoBehaviour
         
         if (shouldRecord)
         {
-            string saveCsvFormat = string.Format("{0:F3}, {1:F3}, {2:F3}, {3:F3}, {4:F2}\n", headsetPosition.x, headsetPosition.y, headsetPosition.z, distance, movementSpeed);
+            string formattedTime = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+            string saveCsvFormat = string.Format("{0:F3}, {1:F3}, {2:F3}, {3:F3}, {4:F2}, {5}\n", 
+                headsetPosition.x, headsetPosition.y, headsetPosition.z, 
+                distance, movementSpeed, formattedTime
+                );
             SaveFile(saveCsvFormat);
         }
     }
